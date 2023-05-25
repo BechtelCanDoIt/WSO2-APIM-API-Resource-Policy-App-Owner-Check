@@ -19,9 +19,12 @@ package com.wso2.demo.apim.mediator.appownercheck;
 import org.apache.synapse.MessageContext;
 import org.apache.synapse.mediators.AbstractMediator;
 import org.apache.synapse.core.axis2.Axis2MessageContext;
-//import org.wso2.carbon.apimgt.common.gateway.dto.JWTValidationInfo;
 import org.wso2.carbon.apimgt.common.gateway.util.JWTUtil;
-//import org.wso2.carbon.apimgt.impl.utils.APIUtil;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.lang.reflect.Type;
+import java.util.List;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,8 +32,7 @@ import java.util.Map;
 public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
     /////////////////////////////////////////////////////////////////////
     // Use Case: Ensure that the API Application Owner from the JWT token
-    // details: sub name match the given API Resource Policy
-    // Attribute sub-name value.
+    // details: sub name match the ownwers list from the policy file.
     /////////////////////////////////////////////////////////////////////
     // DISCLAMER: This demo is for a very specific use case. It is not a
     // match for 99.9% of the time where the API Product is
@@ -43,10 +45,21 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
     // ASSUMPTION: Token type will be a JWT token. Not checking so far.
     //////////////////////////////////////////////////////////////////////
 
+    /* TODO 
+        - add null checks
+        - check that expected data is present - mock asserts
+        - validate we have a JWT token
+        - validate that policy apiOwnerDetails string has well formed json array
+        - enhance debugging ability such as trace
+        - enhance fault logic to generate an unauthorized application fault code and message that makes sense for this mediator
+    */
+    
     @Override
     public boolean mediate(MessageContext context) {
         setups();
-        
+
+        boolean ownerFound = false;
+
         // Cast the message context to access transport headers
         org.apache.axis2.context.MessageContext axis2MessageContext = ((Axis2MessageContext) context)
                 .getAxis2MessageContext();
@@ -59,76 +72,45 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
         // Extract the "sub" field from the JWT token
         // Note: You will need to implement the logic to extract the "sub" field from
         // the JWT token.
-        String sub = extractSubFromJwt(jwtToken, context);
+        String sub = extractSubFromJwt(jwtToken, context);      
 
-        // Option A: Access the policy attributes
-        // Option A: Will not work in a mediator
-        // Note: You will need to implement the logic to access the policy attributes.
-        Map<String, String> policyAttributes = getPolicyAttributes(context);
+        // Get the provided Application Owners to pass through for this Resource
+        ownerFound = checkOwners(sub, context);
 
+        // All done and responding back our true/false response
+        return generateResponse(ownerFound, context);
+    }
 
+    private boolean checkOwners(String sub, MessageContext context) {
+        Gson gson = new Gson();
+        String rawOwners = (String) context.getProperty("apiOwnerDetails");
 
-        // Ensure we have required values
-        if (jwtToken != null && sub != null 
-            && policyAttributes != null 
-            && !jwtToken.isEmpty() && !sub.isEmpty() 
-            && policyAttributes.size() > 0
-            ) {
-            debugWorkingValues(sub, policyAttributes);
-            // Check if the "sub" name matches one of the values in the policy attributes.
-            // If they do not match, generate an unauthorized application fault code and
-            // message.
-            //
-            // Note: Modern programming practices would utilize Assert functionality. 
-            // however Mediators that throw expections cause problems for the service
-            // since it is looking for a true/false result. So to accomodate this
-            // we are doing simple checks, logging, and returning false if we are 
-            // missing a dependency.
+        // Define the type for the list
+        Type listType = new TypeToken<List<String>>() {}.getType();
 
-            for (Map.Entry<String, String> entry : policyAttributes.entrySet()) {
-                if (entry.getValue().trim().equalsIgnoreCase(sub.trim())) {
-                    return true;
-                }
-            }
-        } else {
-            log.error("Assert failure");
-            deepDebug(jwtToken, sub, policyAttributes);
+        // Convert JSON array to List
+        List<String> list = gson.fromJson(rawOwners, listType);
+
+        //Manual santity check
+        debugWorkingValues(sub, rawOwners);
+
+        // Check if a value is present
+        if (list.contains(sub)) {
+            // Value is present in the array
+            return true;
         }
-        return generateUnauthorizedFault(context);
+        return false;
     }
 
     private void setups() {
         this.setShortDescription(this.getMediatorName());
         this.setDescription(this.getMediatorName());
+        log.debug("Entered mediate of " + this.getShortDescription());
     }
 
-    private void deepDebug(String jwtToken, String sub, Map<String, String> policyAttributes) {
-        if (jwtToken == null) {
-            log.error("jwtToken is null.");
-        }
-        if (sub == null) {
-            log.error("sub is null.");
-        }
-        if (policyAttributes == null) {
-            log.error("policyAttributes is null.");
-        }
-        if (jwtToken.isEmpty()) {
-            log.error("jwtToken is empty.");
-        }
-        if (sub.isEmpty()) {
-            log.error("sub is empty.");
-        }
-        if (policyAttributes.size() == 0) {
-            log.error("policyAttributes size equals zero.");
-        }
-    }
-
-    private void debugWorkingValues(String sub, Map<String, String> policyAttributes) {
-        // Log the policy attribute names and values and target owner/sub value.
-        for (Map.Entry<String, String> entry : policyAttributes.entrySet()) {
-            log.debug("Policy Attribute Name: " + entry.getKey() + ", Value: " + entry.getValue());
-        }
-        log.debug("sub: " + sub);
+    private void debugWorkingValues(String sub, String owners) {
+        log.debug("API/Application Owners: " + owners);
+        log.debug("Application Subscriber Per JWT: " + sub);
     }
 
     // Implement the logic to extract the "sub" field from the JWT token
@@ -142,25 +124,8 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
         return null;
     }
 
-    // Implement the logic to access the policy attributes
-    /**
-     * @see https://github.com/wso2/product-apim/tree/v4.1.0/modules/distribution/resources/operation_policies
-     * 
-     * Ideally we'd utilize the policy attributes for keeping a list of application owners that can pass.
-     * However these items are not avaialble at the mediation level in a clean way. To use this 
-     * approach will require lots of custom code that is out of scope for this project.
-     * 
-     * @param context
-     * @return
-     */
-    private Map<String, String> getPolicyAttributes(MessageContext context) {
-        // TODO: Implement this method
-        return new HashMap<>();
-    }
-
-    // Implement the logic to generate an unauthorized application fault code and
-    // message
-    private boolean generateUnauthorizedFault(MessageContext context) {
+    private boolean generateResponse(boolean ownerFound, MessageContext context) {
+        if (ownerFound){ return true;}
         context.setFaultResponse(true);
         return false;
     }
