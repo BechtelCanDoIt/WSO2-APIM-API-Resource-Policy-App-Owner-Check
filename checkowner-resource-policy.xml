@@ -1,0 +1,10 @@
+<policy xmlns="http://ws.apache.org/ns/synapse" name="checkowner-resource-policy">
+    <resource context="/api/v1">
+        <in>
+            <sequence>
+                <class name="ApplicationOwnerNameCheckMediator"/>
+            </sequence>
+        </in>
+        <out/>
+    </resource>
+</policy>
