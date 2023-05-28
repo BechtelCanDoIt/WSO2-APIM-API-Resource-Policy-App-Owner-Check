@@ -140,7 +140,12 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
                 throw new NullPointerException("ERROR: headers is null for some reason.");
             }  
 
+            //This is what I expected from try-it
             String jwtToken = (String) headers.get("Authorization");
+            //This is what I get by the time I goes through dev portal try-it
+            if (jwtToken == null){
+                jwtToken = (String) headers.get("X-JWT-Assertion");
+            }
 
             if (jwtToken == null){
                 for (Map.Entry<String, Object> entry: headers.entrySet()){
