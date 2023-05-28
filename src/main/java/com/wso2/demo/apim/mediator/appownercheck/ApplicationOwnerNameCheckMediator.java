@@ -135,8 +135,19 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
             // Access the JWT token from the transport headers
             Map<String, Object> headers = (Map<String, Object>) axis2MessageContext
               .getProperty(org.apache.axis2.context.MessageContext.TRANSPORT_HEADERS);
+            
+            if (headers == null){
+                throw new NullPointerException("ERROR: headers is null for some reason.");
+            }  
 
             String jwtToken = (String) headers.get("Authorization");
+
+            if (jwtToken == null){
+                for (Map.Entry<String, Object> entry: headers.entrySet()){
+                    log.error("TRANSPORT_HEADER: " + entry.getKey() + " : " + entry.getValue());
+                }
+                throw new NullPointerException("jwtToken is null for some reason. Check headers.");
+            }
 
             Map<String, String> claimsMap = JWTUtil.getJWTClaims(jwtToken);// do we need to decrypt?
             return (String) claimsMap.get("sub");
@@ -166,8 +177,8 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
      * NOTE: This is auto set based on the 
      * API Resource Policy Attribute value list.
      */
-    public void setOwnerListValue(String ownerListValue) {
-        this.ownerList = ownerListValue.trim();
+    public void setOwnerList(String ownerList) {
+        this.ownerList = ownerList.trim();
     }
 
     public String getType() {
