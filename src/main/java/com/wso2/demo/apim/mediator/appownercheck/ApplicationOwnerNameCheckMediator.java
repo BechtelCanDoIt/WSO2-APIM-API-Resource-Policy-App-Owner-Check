@@ -1,5 +1,4 @@
 package com.wso2.demo.apim.mediator.appownercheck;
-
 /*
  * Copyright (c) 2023, WSO2 Inc. (http://wso2.com) All Rights Reserved.
  *
@@ -19,14 +18,16 @@ package com.wso2.demo.apim.mediator.appownercheck;
 import org.apache.synapse.MessageContext;
 import org.apache.synapse.mediators.AbstractMediator;
 import org.apache.synapse.core.axis2.Axis2MessageContext;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.wso2.carbon.apimgt.common.gateway.util.JWTUtil;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import java.lang.reflect.Type;
-import java.util.List;
+//import com.google.gson.Gson;
+//import com.google.gson.reflect.TypeToken;
+//import java.lang.reflect.Type;
+//import java.util.List;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
@@ -53,26 +54,22 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
         - enhance debugging ability such as trace
         - enhance fault logic to generate an unauthorized application fault code and message that makes sense for this mediator
     */
-    
+
+    //Setting up variables per Class Mediator requirements
+    //@see https://ei.docs.wso2.com/en/latest/micro-integrator/references/mediators/class-Mediator/
+    private static final Log log = LogFactory.getLog(ApplicationOwnerNameCheckMediator.class);
+    private String ownerList = "";
+
     @Override
     public boolean mediate(MessageContext context) {
         setups();
 
         boolean ownerFound = false;
 
-        // Cast the message context to access transport headers
-        org.apache.axis2.context.MessageContext axis2MessageContext = ((Axis2MessageContext) context)
-                .getAxis2MessageContext();
-
-        // Access the JWT token from the transport headers
-        Map<String, Object> headers = (Map<String, Object>) axis2MessageContext
-                .getProperty(org.apache.axis2.context.MessageContext.TRANSPORT_HEADERS);
-        String jwtToken = (String) headers.get("Authorization");
-
         // Extract the "sub" field from the JWT token
         // Note: You will need to implement the logic to extract the "sub" field from
         // the JWT token.
-        String sub = extractSubFromJwt(jwtToken, context);      
+        String sub = extractSubFromJwt(context);      
 
         // Get the provided Application Owners to pass through for this Resource
         ownerFound = checkOwners(sub, context);
@@ -82,17 +79,31 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
     }
 
     private boolean checkOwners(String sub, MessageContext context) {
+        //Manual santity check
+        debugWorkingValues(sub, getOwnerList());
+        
+        //verify that the data sub value in JWT token matches 
+        //one of the names in the API Resource Owners List
+        return getOwnerList().contains(sub);
+
+        //OR if you want to use a JSON Array instead of comma delimited
+        /*
         Gson gson = new Gson();
         String rawOwners = (String) context.getProperty("apiOwnerDetails");
+
+        //Manual santity check
+        debugWorkingValues(sub, rawOwners);
+        //debugWorkingValues(sub, this.ownersJson);
 
         // Define the type for the list
         Type listType = new TypeToken<List<String>>() {}.getType();
 
         // Convert JSON array to List
         List<String> list = gson.fromJson(rawOwners, listType);
+        //List<String> list = gson.fromJson(this.ownersJson, listType);
 
-        //Manual santity check
-        debugWorkingValues(sub, rawOwners);
+        //debugging
+        log.info("Exiting mediate of " + this.getShortDescription());
 
         // Check if a value is present
         if (list.contains(sub)) {
@@ -100,22 +111,33 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
             return true;
         }
         return false;
+        */
     }
 
     private void setups() {
         this.setShortDescription(this.getMediatorName());
         this.setDescription(this.getMediatorName());
-        log.debug("Entered mediate of " + this.getShortDescription());
+        log.info("Entered mediate of " + this.getShortDescription());
     }
 
     private void debugWorkingValues(String sub, String owners) {
-        log.debug("API/Application Owners: " + owners);
-        log.debug("Application Subscriber Per JWT: " + sub);
+        log.info("API/Resource Owners: " + owners);
+        log.info("Application Subscriber Per JWT: " + sub);
     }
 
     // Implement the logic to extract the "sub" field from the JWT token
-    private String extractSubFromJwt(String jwtToken, MessageContext context) {
+    private String extractSubFromJwt(MessageContext context) {
         try {
+            // Cast the message context to access transport headers
+            org.apache.axis2.context.MessageContext axis2MessageContext = ((Axis2MessageContext) context)
+            .getAxis2MessageContext();
+
+            // Access the JWT token from the transport headers
+            Map<String, Object> headers = (Map<String, Object>) axis2MessageContext
+              .getProperty(org.apache.axis2.context.MessageContext.TRANSPORT_HEADERS);
+
+            String jwtToken = (String) headers.get("Authorization");
+
             Map<String, String> claimsMap = JWTUtil.getJWTClaims(jwtToken);// do we need to decrypt?
             return (String) claimsMap.get("sub");
         } catch (Exception e) {
@@ -125,8 +147,39 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
     }
 
     private boolean generateResponse(boolean ownerFound, MessageContext context) {
-        if (ownerFound){ return true;}
+        if (ownerFound){ 
+            return true;
+        } 
         context.setFaultResponse(true);
         return false;
     }
+
+    /**
+     * @return String return the ownerList
+     */
+    public String getOwnerList() {
+        return this.ownerList;
+    }
+
+    /**
+     * @param ownerList the ownerList to set
+     * NOTE: This is auto set based on the 
+     * API Resource Policy Attribute value list.
+     */
+    public void setOwnerListValue(String ownerListValue) {
+        this.ownerList = ownerListValue.trim();
+    }
+
+    public String getType() {
+        return null;
+    }
+
+    public void setTraceState(int traceState) {
+        traceState = 0;
+    }
+
+    public int getTraceState() {
+        return 0;
+    }
+
 }
