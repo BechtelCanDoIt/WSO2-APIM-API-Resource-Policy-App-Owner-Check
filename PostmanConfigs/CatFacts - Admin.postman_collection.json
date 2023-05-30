@@ -1,0 +1,135 @@
+{
+	"info": {
+		"_postman_id": "1abfa8ab-e29d-4884-bf2a-5e9f5e10562a",
+		"name": "CatFacts - Admin",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "/fact",
+			"request": {
+				"auth": {
+					"type": "oauth2"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/fact",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"fact"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "ok",
+					"originalRequest": {
+						"method": "GET",
+						"header": [
+							{
+								"description": "Added as a part of security scheme: oauth2",
+								"key": "Authorization",
+								"value": "<token>"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/fact",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fact"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "text",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "text/plain"
+						}
+					],
+					"cookie": [],
+					"body": ""
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "oauth2",
+		"oauth2": [
+			{
+				"key": "accessTokenUrl",
+				"value": "https://localhost:9443/oauth2/token",
+				"type": "string"
+			},
+			{
+				"key": "clientSecret",
+				"value": "3KN8lEuBgRUQulsXbCyAlTb7oYMa",
+				"type": "string"
+			},
+			{
+				"key": "clientId",
+				"value": "lvMimLbyo2mre4TYznEjN8msM4Ea",
+				"type": "string"
+			},
+			{
+				"key": "tokenName",
+				"value": "CatFacts-Admin",
+				"type": "string"
+			},
+			{
+				"key": "challengeAlgorithm",
+				"value": "S256",
+				"type": "string"
+			},
+			{
+				"key": "grant_type",
+				"value": "client_credentials",
+				"type": "string"
+			},
+			{
+				"key": "addTokenTo",
+				"value": "header",
+				"type": "string"
+			},
+			{
+				"key": "client_authentication",
+				"value": "header",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://localhost:8243/cats/1.0.0",
+			"type": "string"
+		}
+	]
+}

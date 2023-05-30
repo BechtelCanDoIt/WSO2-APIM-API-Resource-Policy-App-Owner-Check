@@ -1,4 +1,3 @@
-package com.wso2.demo.apim.mediator.appownercheck;
 /*
  * Copyright (c) 2023, WSO2 Inc. (http://wso2.com) All Rights Reserved.
  *
@@ -13,20 +12,18 @@ package com.wso2.demo.apim.mediator.appownercheck;
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * 
+ * ---
+ * This is NOT a contribution and is only a POC/demo.
  */
+
+ package com.wso2.demo.apim.mediator.appownercheck;
 
 import org.apache.synapse.MessageContext;
 import org.apache.synapse.mediators.AbstractMediator;
 import org.apache.synapse.core.axis2.Axis2MessageContext;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import org.wso2.carbon.apimgt.common.gateway.util.JWTUtil;
-
-//import com.google.gson.Gson;
-//import com.google.gson.reflect.TypeToken;
-//import java.lang.reflect.Type;
-//import java.util.List;
 
 import java.util.Map;
 
@@ -49,15 +46,12 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
     /* TODO 
         - add null checks
         - check that expected data is present - mock asserts
-        - validate we have a JWT token
-        - validate that policy apiOwnerDetails string has well formed json array
+        - validate we have a expted JWT token type
+        - validate that policy apiOwnerDetails string is present and in expected format
         - enhance debugging ability such as trace
         - enhance fault logic to generate an unauthorized application fault code and message that makes sense for this mediator
     */
-
-    //Setting up variables per Class Mediator requirements
-    //@see https://ei.docs.wso2.com/en/latest/micro-integrator/references/mediators/class-Mediator/
-    private static final Log log = LogFactory.getLog(ApplicationOwnerNameCheckMediator.class);
+   
     private String ownerList = "";
 
     @Override
@@ -75,7 +69,7 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
         ownerFound = checkOwners(sub, context);
 
         // All done and responding back our true/false response
-        return generateResponse(ownerFound, context);
+        return generateResponse(ownerFound, sub, context);
     }
 
     private boolean checkOwners(String sub, MessageContext context) {
@@ -83,35 +77,8 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
         debugWorkingValues(sub, getOwnerList());
         
         //verify that the data sub value in JWT token matches 
-        //one of the names in the API Resource Owners List
-        return getOwnerList().contains(sub);
-
-        //OR if you want to use a JSON Array instead of comma delimited
-        /*
-        Gson gson = new Gson();
-        String rawOwners = (String) context.getProperty("apiOwnerDetails");
-
-        //Manual santity check
-        debugWorkingValues(sub, rawOwners);
-        //debugWorkingValues(sub, this.ownersJson);
-
-        // Define the type for the list
-        Type listType = new TypeToken<List<String>>() {}.getType();
-
-        // Convert JSON array to List
-        List<String> list = gson.fromJson(rawOwners, listType);
-        //List<String> list = gson.fromJson(this.ownersJson, listType);
-
-        //debugging
-        log.info("Exiting mediate of " + this.getShortDescription());
-
-        // Check if a value is present
-        if (list.contains(sub)) {
-            // Value is present in the array
-            return true;
-        }
-        return false;
-        */
+        //one of the names in the API Resource Owners List.
+        return getOwnerList().contains(sub);    
     }
 
     private void setups() {
@@ -162,11 +129,12 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
         return null;
     }
 
-    private boolean generateResponse(boolean ownerFound, MessageContext context) {
+    private boolean generateResponse(boolean ownerFound, String usr, MessageContext context) {
         if (ownerFound){ 
             return true;
         } 
-        context.setFaultResponse(true);
+        log.error(usr + " attempted to utilize an api resource policy context where they are not listed as an" 
+                  + " authorized user in the Policy Attribute.");
         return false;
     }
 
@@ -184,18 +152,6 @@ public class ApplicationOwnerNameCheckMediator extends AbstractMediator {
      */
     public void setOwnerList(String ownerList) {
         this.ownerList = ownerList.trim();
-    }
-
-    public String getType() {
-        return null;
-    }
-
-    public void setTraceState(int traceState) {
-        traceState = 0;
-    }
-
-    public int getTraceState() {
-        return 0;
     }
 
 }
