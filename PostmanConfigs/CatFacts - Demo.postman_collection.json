@@ -65,12 +65,12 @@
 		"oauth2": [
 			{
 				"key": "clientSecret",
-				"value": "li_gJIRnE_bqyrFJpRZ7sJgjhuEa",
+				"value": "",
 				"type": "string"
 			},
 			{
 				"key": "clientId",
-				"value": "M9jT9HthxwYP3VMV_nI8L6l6efsa",
+				"value": "",
 				"type": "string"
 			},
 			{
